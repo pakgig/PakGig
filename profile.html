@@ -43,7 +43,7 @@
                 <div class="flex-1 text-center sm:text-left space-y-1">
                     <div class="flex items-center justify-center sm:justify-start gap-2">
                         <h1 id="displayName" class="text-xl font-bold text-gray-900">Your Name</h1>
-                        <span id="proPill" class="hidden text-[10px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">PRO</span>
+                        <span id="proPill" class="hidden text-[10px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-emerald-700 text-white shadow-sm">PRO</span>
                     </div>
                     <p id="displayTagline" class="text-sm text-gray-500">Add a short professional tagline</p>
                     <p class="text-xs text-gray-400 pt-1">Member since <span id="memberSince">—</span></p>
@@ -247,7 +247,7 @@
                 const badge = $("planBadge");
                 if (isPro) {
                     badge.textContent = "Pro";
-                    badge.className = "text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300";
+                    badge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-700 text-white";
                     $("proPill").classList.remove("hidden");
                 } else {
                     badge.textContent = "Standard";
