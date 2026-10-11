@@ -8,11 +8,14 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        /* Keep the page inside the phone screen: nothing may push the page wider than the screen */
+        html, body { max-width: 100%; overflow-x: clip; }
+        img, svg, video { max-width: 100%; }
     </style>
 </head>
 <body class="bg-gray-50 flex items-center justify-center min-h-screen py-12 px-4">
 
-    <div class="max-w-md w-full space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+    <div class="max-w-md w-full min-w-0 space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <!-- Logo -->
         <div class="text-center space-y-2">
             <a href="index.html" class="text-3xl font-extrabold text-emerald-700 tracking-tight inline-block">Pak<span class="text-gray-900">Gig</span></a>
