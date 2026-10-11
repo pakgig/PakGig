@@ -32,7 +32,10 @@
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
   <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900" id="welcome">Welcome back!</h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold text-gray-900" id="welcome">Welcome back!</h1>
+        <span id="proPill" class="hidden text-[10px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">PRO</span>
+      </div>
       <p class="text-sm text-gray-500">Your orders, earnings and gigs in one place.</p>
     </div>
     <div class="flex gap-3">
@@ -70,6 +73,7 @@
   import { requireLogin, bindLogout } from "./js/session.js";
   import { watchMyOrders, watchMyWithdrawals, getMyProfile, listMyGigs, deleteGig } from "./js/data.js";
   import { esc, money, roleIn, CATEGORIES, STATUS_META, sellerTotals, buyerHeld } from "./js/ledger.js";
+  import { amIPro } from "./js/pro.js";
 
   bindLogout("index.html");
 
@@ -165,6 +169,11 @@
     const name = ((profile && profile.fullName) || me.displayName || me.email || "").trim();
     $("navAvatar").textContent = name ? name.charAt(0).toUpperCase() : "U";
     $("welcome").textContent = "Welcome back, " + (name.split(" ")[0] || "there") + "!";
+
+    // Pro sellers see their own PRO badge here too.
+    if (isSeller()) {
+      amIPro(me.id).then((pro) => { if (pro) $("proPill").classList.remove("hidden"); }).catch(() => {});
+    }
 
     const onError = () => {
       const box = $("dashAlert");
