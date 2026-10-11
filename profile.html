@@ -141,7 +141,20 @@
 
                     <hr class="border-gray-100">
 
-                    <button type="button" id="changePwBtn" class="block text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-60 disabled:cursor-not-allowed">Change Password →</button>
+                    <button type="button" id="changePwBtn" class="block text-xs font-semibold text-emerald-700 hover:underline">Change Password →</button>
+
+                    <!-- Change password form (works without email) -->
+                    <form id="changePwForm" class="hidden space-y-3">
+                        <input type="password" id="curPw" required autocomplete="current-password" placeholder="Current password" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <input type="password" id="newPw" required minlength="8" autocomplete="new-password" placeholder="New password (8+ characters)" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <input type="password" id="newPw2" required autocomplete="new-password" placeholder="Confirm new password" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <div class="flex gap-2">
+                            <button type="submit" id="pwSaveBtn" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed">Update Password</button>
+                            <button type="button" id="pwCancelBtn" class="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                        </div>
+                        <button type="button" id="pwEmailBtn" class="block text-[11px] text-gray-500 hover:underline disabled:opacity-60 disabled:cursor-not-allowed">Forgot your current password? Email me a reset link</button>
+                    </form>
+
                     <button type="button" id="deleteAccountBtn" class="block text-xs font-semibold text-red-600 hover:underline">Delete Account</button>
                 </div>
             </div>
@@ -260,26 +273,68 @@
 
         $("cancelBtn").addEventListener("click", render);
 
-        $("changePwBtn").addEventListener("click", async () => {
-            const btn = $("changePwBtn");
-            btn.disabled = true;
-            btn.textContent = "Sending...";
+        // ---- Change password (no email needed) ----
+        function closePwForm() {
+            $("changePwForm").reset();
+            $("changePwForm").classList.add("hidden");
+            $("changePwBtn").classList.remove("hidden");
+        }
 
-            // The reset link in the email must open our reset-password page.
-            const redirectTo = new URL("reset-password.html", window.location.href).href;
-            const { error } = await supabase.auth.resetPasswordForEmail(currentUser.email, { redirectTo });
+        $("changePwBtn").addEventListener("click", () => {
+            $("changePwBtn").classList.add("hidden");
+            $("changePwForm").classList.remove("hidden");
+            $("curPw").focus();
+        });
+
+        $("pwCancelBtn").addEventListener("click", closePwForm);
+
+        $("changePwForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const cur = $("curPw").value;
+            const pw = $("newPw").value;
+            const pw2 = $("newPw2").value;
+
+            if (pw.length < 8) { showAlert("error", "New password must be at least 8 characters long."); return; }
+            if (pw !== pw2) { showAlert("error", "New passwords do not match."); return; }
+            if (pw === cur) { showAlert("error", "New password must be different from your current password."); return; }
+
+            const btn = $("pwSaveBtn");
+            btn.disabled = true;
+            btn.textContent = "Updating...";
+
+            // Confirm the current password first.
+            const check = await supabase.auth.signInWithPassword({ email: currentUser.email, password: cur });
+            if (check.error) {
+                showAlert("error", "Your current password is incorrect.");
+                btn.disabled = false;
+                btn.textContent = "Update Password";
+                return;
+            }
+
+            const { error } = await supabase.auth.updateUser({ password: pw });
+            btn.disabled = false;
+            btn.textContent = "Update Password";
 
             if (error) {
                 showAlert("error", friendlyAuthError(error.message));
+                return;
+            }
+            closePwForm();
+            showAlert("success", "Password updated successfully.");
+        });
+
+        // Fallback: email a reset link (needs email sending to work).
+        $("pwEmailBtn").addEventListener("click", async () => {
+            const btn = $("pwEmailBtn");
+            btn.disabled = true;
+            const redirectTo = new URL("reset-password.html", window.location.href).href;
+            const { error } = await supabase.auth.resetPasswordForEmail(currentUser.email, { redirectTo });
+            if (error) {
+                showAlert("error", friendlyAuthError(error.message));
                 btn.disabled = false;
-                btn.textContent = "Change Password →";
             } else {
                 showAlert("success", "Password reset link sent to " + currentUser.email + ". Please check your inbox and spam folder.");
-                // Short pause before allowing another request (avoids email rate limits)
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.textContent = "Change Password →";
-                }, 30000);
+                setTimeout(() => { btn.disabled = false; }, 30000);
             }
         });
 
