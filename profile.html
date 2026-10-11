@@ -41,7 +41,10 @@
 
                 <!-- Basic info -->
                 <div class="flex-1 text-center sm:text-left space-y-1">
-                    <h1 id="displayName" class="text-xl font-bold text-gray-900">Your Name</h1>
+                    <div class="flex items-center justify-center sm:justify-start gap-2">
+                        <h1 id="displayName" class="text-xl font-bold text-gray-900">Your Name</h1>
+                        <span id="proPill" class="hidden text-[10px] font-extrabold tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">PRO</span>
+                    </div>
                     <p id="displayTagline" class="text-sm text-gray-500">Add a short professional tagline</p>
                     <p class="text-xs text-gray-400 pt-1">Member since <span id="memberSince">—</span></p>
                 </div>
@@ -129,6 +132,11 @@
                         <span id="accountType" class="font-semibold text-gray-900">Buyer</span>
                     </div>
 
+                    <div id="planRow" class="hidden flex items-center justify-between text-sm">
+                        <span class="text-gray-600">Membership</span>
+                        <span id="planBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 border border-gray-200">Standard</span>
+                    </div>
+
                     <div class="flex items-center justify-between text-sm">
                         <span class="text-gray-600">Email verified</span>
                         <span id="verifiedBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Pending</span>
@@ -167,6 +175,7 @@
         import { getMyProfile, updateMyProfile, deleteMyAccount, watchMyOrders } from "./js/data.js";
         import { getMyKyc } from "./js/kyc.js";
         import { money, sellerTotals, buyerHeld } from "./js/ledger.js";
+        import { amIPro } from "./js/pro.js";
 
         bindLogout();
 
@@ -224,6 +233,26 @@
                 badge.textContent = looks[key][0];
                 badge.className = "text-xs font-semibold px-2 py-0.5 rounded-full border " + looks[key][1];
             } catch (err) { /* leave the dash */ }
+        }
+
+        // Shows the Pro badge for Pro sellers. Sellers and admins see a Membership row.
+        async function loadPlan() {
+            try {
+                const role = saved.role || "buyer";
+                if (role !== "seller" && role !== "admin") return;
+                const isPro = await amIPro(currentUser.id);
+                const row = $("planRow");
+                row.classList.remove("hidden");
+                row.classList.add("flex");
+                const badge = $("planBadge");
+                if (isPro) {
+                    badge.textContent = "Pro";
+                    badge.className = "text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300";
+                    $("proPill").classList.remove("hidden");
+                } else {
+                    badge.textContent = "Standard";
+                }
+            } catch (err) { /* leave the row hidden */ }
         }
 
         async function loadProfile() {
@@ -365,6 +394,7 @@
             currentUser = res.user;
             await loadProfile();
             loadKyc();
+            loadPlan();
             watchMyOrders(currentUser.uid, renderStats, () => {});
         });
     </script>
