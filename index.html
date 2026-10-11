@@ -40,18 +40,20 @@
 
             <nav class="flex items-center gap-4 text-sm font-medium">
                 <a href="Services.html" class="hidden sm:block text-gray-600 hover:text-emerald-700">Explore Services</a>
-                <a href="signup.html" class="hidden sm:block text-gray-600 hover:text-emerald-700">Become a Seller</a>
+                <a href="signup.html" data-guest-only class="hidden sm:block text-gray-600 hover:text-emerald-700">Become a Seller</a>
                 <div id="auth-buttons" class="flex items-center space-x-4 invisible">
     <a href="login.html" class="text-sm font-semibold text-gray-700 hover:text-emerald-700">Sign In</a>
     <a href="signup.html" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2 rounded-full">Join Free</a>
 </div>
 
 <div id="user-profile-menu" class="hidden items-center space-x-4">
+    <a id="adminLink" href="admin.html" class="hidden text-sm font-semibold text-gray-700 hover:text-emerald-700">Admin</a>
     <a href="dashboard.html" class="text-sm font-semibold text-emerald-700 hover:underline">Dashboard</a>
     <a href="profile.html" title="My Profile" class="flex items-center gap-2 group">
         <span id="navAvatar" class="w-9 h-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-sm">U</span>
         <span id="navName" class="hidden md:block text-sm font-semibold text-gray-700 group-hover:text-emerald-700">Profile</span>
     </a>
+    <a href="index.html" data-logout class="hidden sm:inline text-sm font-medium text-gray-500 hover:text-red-600">Logout</a>
 </div>
             </nav>
         </div>
@@ -61,7 +63,7 @@
     <div class="bg-white border-b border-gray-200 overflow-x-auto">
         <div class="max-w-7xl mx-auto px-4 flex gap-6 py-2 text-sm text-gray-600 whitespace-nowrap">
             <a href="Services.html" class="sm:hidden font-semibold text-gray-900 pb-1">Explore Services</a>
-            <a href="signup.html" class="sm:hidden font-semibold text-gray-900 pb-1">Become a Seller</a>
+            <a href="signup.html" data-guest-only class="sm:hidden font-semibold text-gray-900 pb-1">Become a Seller</a>
             <a href="Services.html" class="hover:text-emerald-700 font-medium text-emerald-700 border-b-2 border-emerald-700 pb-1">Web Development</a>
             <a href="Services.html" class="hover:text-emerald-700 pb-1">Graphics & Design</a>
             <a href="Services.html" class="hover:text-emerald-700 pb-1">Digital Marketing</a>
@@ -213,8 +215,31 @@
     }, 3000);
 </script>
 <script type="module">
-    import { bindNavbar } from "./js/session.js";
+    import { bindNavbar, bindLogout } from "./js/session.js";
+    import { supabase } from "./js/supabaseClient.js";
+
     bindNavbar();
+    bindLogout();
+
+    // Logged-in users do not need "Become a Seller"; admins get an Admin link.
+    async function applyRoleUi(session) {
+        document.querySelectorAll("[data-guest-only]").forEach(function (el) {
+            el.style.display = session ? "none" : "";
+        });
+        var adminLink = document.getElementById("adminLink");
+        if (!adminLink) return;
+        adminLink.classList.add("hidden");
+        if (!session) return;
+        try {
+            var res = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
+            if (res.data && res.data.role === "admin") adminLink.classList.remove("hidden");
+        } catch (e) { /* the link just stays hidden */ }
+    }
+
+    supabase.auth.getSession().then(function (r) { applyRoleUi(r.data.session); });
+    supabase.auth.onAuthStateChange(function (_event, session) {
+        setTimeout(function () { applyRoleUi(session); }, 0);
+    });
 </script>
 </body>
 </html>
