@@ -37,6 +37,42 @@ export async function whenAuthReady() {
     return data.session ? withAliases(data.session.user) : null;
 }
 
+// Reads the signed-in user's profile row. A slow or failed request is retried
+// up to 3 times, so one hiccup is never mistaken for "this user is not an admin".
+// Returns { profile, failed }:
+//   profile = the row, or null
+//   failed  = true when the profile could not be read because of a network or
+//             server problem (as opposed to the row genuinely not existing).
+async function fetchProfileWithRetry(userId) {
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const res = await supabase
+                .from("profiles")
+                .select("role, kyc_status, status, suspension_reason")
+                .eq("id", userId)
+                .single();
+            if (!res.error && res.data) return { profile: res.data, failed: false };
+            lastError = res.error || new Error("no data");
+            // PGRST116 means "no row found": retrying will not help.
+            if (res.error && res.error.code === "PGRST116") return { profile: null, failed: false };
+        } catch (err) {
+            lastError = err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+    }
+    return { profile: null, failed: !!lastError };
+}
+
+// Shown instead of redirecting when the account could not be checked
+// (for example a weak connection). The person stays on the page and can reload.
+function showVerifyError() {
+    const bar = document.createElement("div");
+    bar.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#fef2f2;color:#991b1b;border-bottom:1px solid #fecaca;padding:12px 16px;font:600 13px sans-serif;text-align:center";
+    bar.innerHTML = 'We could not verify your account right now. Please check your connection and <a href="" style="text-decoration:underline">reload this page</a>.';
+    document.body.appendChild(bar);
+}
+
 // For pages that require a logged-in user: redirects to login.html (or
 // index.html, if adminOnly and the user isn't an admin) and otherwise
 // resolves with { user }.
@@ -52,8 +88,15 @@ export async function requireLogin(opts = {}) {
         return new Promise(() => {}); // page is navigating away
     }
     const user = withAliases(session.user);
-    const { data: profile } = await supabase
-        .from("profiles").select("role, kyc_status, status, suspension_reason").eq("id", user.id).single();
+    const { profile, failed } = await fetchProfileWithRetry(user.id);
+
+    // The account could not be checked (network/server problem). Do NOT treat
+    // that as "not an admin" or "KYC missing": stay here and ask for a reload.
+    if (failed) {
+        showVerifyError();
+        return new Promise(() => {});
+    }
+
     if (profile && profile.status === "suspended") {
         // Keep the reason so the login page can show it after sign-out.
         try { sessionStorage.setItem("pakgigSuspendedReason", profile.suspension_reason || ""); } catch (e) {}
