@@ -3,9 +3,9 @@
       (icon + wordmark + slogan). The logo is still a link to the homepage.
    2. Sets the logo as the browser-tab icon.
    3. Applies one shared look everywhere: the Inter font, one footer colour,
-      and the same top menu (Services, Dashboard, Orders, Messages, Wallet,
-      Profile, Logout) on every signed-in page, including on phones.
-      Admin pages keep their own admin menu.
+      and the same top menu (Home, Services, Dashboard, Orders, Messages,
+      Wallet, Profile, Logout) on every signed-in page, including on phones.
+      Admin pages keep their own admin menu, with a Home link added.
    4. Adds the standard footer (legal links) to signed-in pages that have none.
    If anything here fails the page must still work, so every step is guarded. */
 (function () {
@@ -13,6 +13,7 @@
     window.__pgBrandLoaded = true;
 
     var APP_LINKS = [
+        ["Home", "index.html"],
         ["Services", "Services.html"],
         ["Dashboard", "dashboard.html"],
         ["Orders", "order.html"],
@@ -99,11 +100,27 @@
         }
     }
 
+    // Admin pages keep their own menu; only a Home link is added at the start.
+    function addHomeToAdminNav() {
+        var nav = document.querySelector("body > nav");
+        if (!nav) return;
+        var out = nav.querySelector("[data-logout]");
+        if (!out) return;
+        var box = out.parentElement;
+        if (!box || box.getAttribute("data-pg-home")) return;
+        box.setAttribute("data-pg-home", "1");
+        var sample = box.querySelector("a");
+        var a = document.createElement("a");
+        a.textContent = "Home";
+        a.href = "index.html";
+        a.className = "hover:text-emerald-700";
+        box.insertBefore(a, sample || out);
+    }
+
     // Same top menu on every signed-in page that has the simple top bar.
     // The existing Logout link is kept (not replaced) so its click handler still works.
-    // Admin pages (admin.html, admin-kyc.html) keep their own admin menu.
     function unifyAppNav() {
-        if (currentPage().indexOf("admin") === 0) return;
+        if (currentPage().indexOf("admin") === 0) { addHomeToAdminNav(); return; }
         var nav = document.querySelector("body > nav");
         if (!nav) return;
         var out = nav.querySelector("[data-logout]");
