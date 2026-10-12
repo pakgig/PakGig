@@ -5,6 +5,7 @@
    3. Applies one shared look everywhere: the Inter font, one footer colour,
       and the same top menu (Services, Dashboard, Orders, Messages, Wallet,
       Profile, Logout) on every signed-in page, including on phones.
+      Admin pages keep their own admin menu.
    4. Adds the standard footer (legal links) to signed-in pages that have none.
    If anything here fails the page must still work, so every step is guarded. */
 (function () {
@@ -100,7 +101,9 @@
 
     // Same top menu on every signed-in page that has the simple top bar.
     // The existing Logout link is kept (not replaced) so its click handler still works.
+    // Admin pages (admin.html, admin-kyc.html) keep their own admin menu.
     function unifyAppNav() {
+        if (currentPage().indexOf("admin") === 0) return;
         var nav = document.querySelector("body > nav");
         if (!nav) return;
         var out = nav.querySelector("[data-logout]");
