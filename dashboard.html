@@ -18,13 +18,26 @@
       <a href="index.html" class="text-2xl font-extrabold text-emerald-700 tracking-tight">PakGig</a>
       <nav class="hidden md:flex space-x-4">
         <a href="Services.html" class="text-sm font-semibold text-gray-600 hover:text-emerald-700">Services</a>
+        <a href="order.html" class="text-sm font-semibold text-gray-600 hover:text-emerald-700">Orders</a>
+        <a href="messages.html" class="text-sm font-semibold text-gray-600 hover:text-emerald-700">Messages</a>
+        <a href="escrow.html" class="text-sm font-semibold text-gray-600 hover:text-emerald-700">Wallet</a>
       </nav>
     </div>
     <div class="flex items-center space-x-4">
       <a href="admin.html" id="adminLink" class="hidden text-sm font-semibold text-emerald-700 hover:underline">Admin Panel</a>
-      <a href="profile.html" class="text-sm font-semibold text-gray-600 hover:text-emerald-700">Profile</a>
+      <a href="profile.html" class="hidden sm:inline text-sm font-semibold text-gray-600 hover:text-emerald-700">Profile</a>
       <button id="logout-btn" data-logout type="button" class="text-sm font-semibold text-red-600 hover:text-red-800">Logout</button>
       <a href="profile.html" id="navAvatar" title="My Profile" class="w-9 h-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-sm">U</a>
+    </div>
+  </div>
+  <!-- Phone menu: the same links as the desktop menu, in one scrollable row -->
+  <div class="md:hidden border-t border-gray-100 overflow-x-auto">
+    <div class="flex gap-5 px-4 py-2 text-sm font-semibold text-gray-600 whitespace-nowrap">
+      <a href="Services.html" class="hover:text-emerald-700">Services</a>
+      <a href="order.html" class="hover:text-emerald-700">Orders</a>
+      <a href="messages.html" class="hover:text-emerald-700">Messages</a>
+      <a href="escrow.html" class="hover:text-emerald-700">Wallet</a>
+      <a href="profile.html" class="hover:text-emerald-700">Profile</a>
     </div>
   </div>
 </header>
