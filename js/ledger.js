@@ -25,7 +25,6 @@ export const CATEGORIES = {
     web: "Web & App Development",
     design: "Graphics & Design",
     seo: "Digital Marketing / SEO",
-    architecture: "Architecture & Architectural Design",
     writing: "Writing & Translation",
     video: "Video & Animation",
     ai: "AI & Data Entry"
