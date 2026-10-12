@@ -24,7 +24,8 @@ export function roleIn(order, uid) {
 export const CATEGORIES = {
     web: "Web & App Development",
     design: "Graphics & Design",
-    seo: "Digital Marketing / SEO"
+    seo: "Digital Marketing / SEO",
+    architecture: "Architecture & Architectural Design"
 };
 
 export const STATUS_META = {
