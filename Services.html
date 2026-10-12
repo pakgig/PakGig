@@ -56,6 +56,7 @@
             <button onclick="filterCategory('web')" class="cat-btn bg-white border border-gray-300 text-gray-700 hover:border-emerald-600 px-3 py-1.5 rounded-full font-medium transition">Web & App</button>
             <button onclick="filterCategory('design')" class="cat-btn bg-white border border-gray-300 text-gray-700 hover:border-emerald-600 px-3 py-1.5 rounded-full font-medium transition">Graphics & Design</button>
             <button onclick="filterCategory('seo')" class="cat-btn bg-white border border-gray-300 text-gray-700 hover:border-emerald-600 px-3 py-1.5 rounded-full font-medium transition">Digital Marketing</button>
+            <button onclick="filterCategory('architecture')" class="cat-btn bg-white border border-gray-300 text-gray-700 hover:border-emerald-600 px-3 py-1.5 rounded-full font-medium transition">Architecture</button>
         </div>
 
         <!-- Services Grid -->
@@ -223,7 +224,8 @@ const $ = (id) => document.getElementById(id);
 const categoryStyle = {
     web:    { header: "bg-teal-700",   label: "text-emerald-700" },
     design: { header: "bg-blue-600",   label: "text-blue-600" },
-    seo:    { header: "bg-indigo-600", label: "text-indigo-600" }
+    seo:    { header: "bg-indigo-600", label: "text-indigo-600" },
+    architecture: { header: "bg-amber-700", label: "text-amber-700" }
 };
 
 let gigs = [];
