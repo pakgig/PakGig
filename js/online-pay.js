@@ -1,6 +1,7 @@
 /* PakGig — adds a "Pay online with Safepay" button to the order popup on Services.html.
    The old manual deposit form stays below it as a fallback. */
 import { startOnlinePayment } from "./payments.js";
+import "./fx-display.js";
 
 let selectedGigId = null;
 
