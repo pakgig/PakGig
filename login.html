@@ -85,6 +85,21 @@
             showAlert("error", suspendedMsg(savedReason));
         }
 
+        // Reads the profile after sign-in. A slow or failed request is retried
+        // up to 3 times so one hiccup never sends an admin to the wrong page.
+        async function loadProfileWithRetry(userId) {
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const res = await supabase
+                        .from("profiles").select("role, kyc_status, status, suspension_reason")
+                        .eq("id", userId).single();
+                    if (!res.error && res.data) return res.data;
+                } catch (err) { /* try again */ }
+                await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+            }
+            return null;
+        }
+
         document.getElementById("loginForm").addEventListener("submit", async (e) => {
             e.preventDefault();
 
@@ -120,24 +135,26 @@
             // everyone else: without an approved KYC they go to verification.
             // (Admin pages re-check the role in the database, so this redirect
             // is only a convenience, not a security check.)
-            let next = "Services.html";
-            try {
-                const { data: profile } = await supabase
-                    .from("profiles").select("role, kyc_status, status, suspension_reason")
-                    .eq("id", data.user.id).single();
-                if (profile && profile.status === "suspended") {
+            // If the profile still cannot be read after retries, go to the
+            // dashboard: it checks again and shows an Admin Panel link to admins.
+            let next = "dashboard.html";
+            const profile = await loadProfileWithRetry(data.user.id);
+            if (profile) {
+                if (profile.status === "suspended") {
                     await supabase.auth.signOut();
                     showAlert("error", suspendedMsg(profile.suspension_reason));
                     loginBtn.disabled = false;
                     loginBtn.textContent = "Sign In";
                     return;
                 }
-                if (profile && profile.role === "admin") {
+                if (profile.role === "admin") {
                     next = "admin.html";
-                } else if (profile && profile.kyc_status !== "approved") {
+                } else if (profile.kyc_status !== "approved") {
                     next = "kyc.html";
+                } else {
+                    next = "Services.html";
                 }
-            } catch (err) { /* fall back to Services.html; pages gate KYC themselves */ }
+            }
 
             showAlert("success", "Logged in successfully! Redirecting...");
             setTimeout(() => { window.location.href = next; }, 600);
