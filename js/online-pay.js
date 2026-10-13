@@ -42,4 +42,8 @@ if (grid && form) {
             payBtn.textContent = "Pay Online with Safepay (Test Mode)";
         }
     });
+
+    // US dollar bank transfer option (only shows when switched on in the database).
+    // Loaded last so its box sits right above the manual form.
+    import("./usd-pay.js").catch(() => {});
 }
