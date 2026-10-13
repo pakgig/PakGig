@@ -85,6 +85,42 @@
                     </div>
                 </div>
 
+                <!-- US dollar payments (Payoneer bank transfers) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-sm font-bold text-gray-900">US Dollar Payments (Payoneer)</h2>
+                        <span class="text-[11px] text-gray-400" id="usdRateNote"></span>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div>
+                            <p class="text-[11px] text-gray-500">Waiting for transfer</p>
+                            <p class="text-base font-bold text-gray-900 mt-1" id="usdAwaiting">$0.00</p>
+                            <p class="text-[11px] text-gray-400" id="usdAwaitingSub">0 orders</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-gray-500">Held in escrow</p>
+                            <p class="text-base font-bold text-amber-600 mt-1" id="usdHeld">$0.00</p>
+                            <p class="text-[11px] text-gray-400" id="usdHeldSub">0 orders</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-gray-500">Released (dollars received)</p>
+                            <p class="text-base font-bold text-emerald-700 mt-1" id="usdReleased">$0.00</p>
+                            <p class="text-[11px] text-gray-400" id="usdReleasedSub">0 orders</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-gray-500">Owed to sellers (after 8% fee)</p>
+                            <p class="text-base font-bold text-gray-900 mt-1" id="usdSellers">Rs. 0</p>
+                            <p class="text-[11px] text-gray-400" id="usdSellersSub"></p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] text-gray-500">Refunds to send back</p>
+                            <p class="text-base font-bold text-red-600 mt-1" id="usdRefund">$0.00</p>
+                            <p class="text-[11px] text-gray-400">Cancelled orders</p>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-4" id="usdHint"></p>
+                </div>
+
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                     <h2 class="text-sm font-bold text-gray-900 mb-3">Recent Activity</h2>
                     <ul class="text-xs text-gray-600 space-y-2" id="recentActivity"></ul>
@@ -281,6 +317,9 @@ function showAlert(type, msg) {
 
 const badge = (meta) => `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full border ${meta.badge}">${esc(meta.label)}</span>`;
 const openDisputes = () => orders.filter((o) => o.disputed && o.disputeStatus === "open");
+const isUsd = (o) => !!(o.deposit && o.deposit.currency === "USD");
+const usd = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pkr = (n) => "Rs. " + Math.round(Number(n || 0)).toLocaleString();
 
 // Suspend / reactivate through the database function (it also blocks or
 // restores the user's sign-in and stores the reason shown on the sign-in page).
@@ -335,12 +374,46 @@ function renderDashboard() {
 
     const waiting = orders.filter((o) => o.status === "pending" && o.escrow === "awaiting");
     const activity = [
-        ...waiting.map((o) => `Deposit to verify: <strong>#${esc(shortId(o.id))}</strong> — ${esc(o.title)} (${money(o.amount)})`),
+        ...waiting.map((o) => isUsd(o)
+            ? `Dollar transfer to confirm: <strong>#${esc(shortId(o.id))}</strong> — ${esc(o.title)} (${usd(o.deposit.requiredUsd)})`
+            : `Deposit to verify: <strong>#${esc(shortId(o.id))}</strong> — ${esc(o.title)} (${money(o.amount)})`),
         ...openDisputes().map((o) => `Dispute opened on <strong>#${esc(shortId(o.id))}</strong> — ${esc(o.title)}`),
         ...withdrawals.filter((w) => w.status === "requested").map((w) => `Withdrawal requested by ${esc(w.sellerName)}: ${money(w.amount)}`),
         ...orders.slice(0, 3).map((o) => `Order <strong>#${esc(shortId(o.id))}</strong> — ${esc(o.title)} is ${esc((STATUS_META[o.status] || STATUS_META.pending).label.toLowerCase())}`)
     ];
     $("recentActivity").innerHTML = activity.map((a) => `<li class="border-b border-gray-50 pb-2 last:border-0">${a}</li>`).join("") || "<li>No recent activity.</li>";
+}
+
+// ---------- US dollar summary (from the database) ----------
+let usdTimer = null;
+function scheduleUsdSummary() {
+    clearTimeout(usdTimer);
+    usdTimer = setTimeout(loadUsdSummary, 300);
+}
+
+async function loadUsdSummary() {
+    try {
+        const { data, error } = await supabase.rpc("admin_usd_summary");
+        if (error || !data) return;
+        const s = data;
+        const rate = Number(s.rate) || 0;
+        $("usdRateNote").textContent = rate ? "Today's rate: Rs " + rate.toLocaleString() + " per $1" : "";
+        $("usdAwaiting").textContent = usd(s.awaitingUsd);
+        $("usdAwaitingSub").textContent = s.awaitingCount + (Number(s.awaitingCount) === 1 ? " order" : " orders");
+        $("usdHeld").textContent = usd(s.heldUsd);
+        $("usdHeldSub").textContent = s.heldCount + (Number(s.heldCount) === 1 ? " order" : " orders") + " · " + pkr(s.heldPkr);
+        $("usdReleased").textContent = usd(s.releasedUsd);
+        $("usdReleasedSub").textContent = s.releasedCount + (Number(s.releasedCount) === 1 ? " order" : " orders");
+        $("usdSellers").textContent = pkr(s.sellersPkr);
+        $("usdSellersSub").textContent = rate && Number(s.sellersPkr) > 0 ? "about " + usd(Number(s.sellersPkr) / rate) + " at today's rate" : "";
+        $("usdRefund").textContent = usd(s.refundUsd);
+
+        const parts = [];
+        if (Number(s.heldUsd) > 0) parts.push("Keep " + usd(s.heldUsd) + " in Payoneer until those orders are released or refunded.");
+        if (Number(s.sellersPkr) > 0) parts.push("To pay sellers for released dollar orders, withdraw about " + usd(rate ? Number(s.sellersPkr) / rate : 0) + " from Payoneer to your PKR bank account. Payouts you already made are not subtracted here.");
+        if (Number(s.refundUsd) > 0) parts.push("Send back " + usd(s.refundUsd) + " to buyers of cancelled orders if not done yet.");
+        $("usdHint").textContent = parts.join(" ") || "No dollar orders yet.";
+    } catch (e) { /* the card just stays empty */ }
 }
 
 // ---------- Users ----------
@@ -486,21 +559,58 @@ function renderOrdersTable() {
         const s = STATUS_META[o.status] || STATUS_META.pending;
         const acts = availableActions(o, me.uid, true);
         const dep = o.deposit || {};
-        const depositLine = o.escrow === "awaiting" && o.status === "pending"
-            ? `<div class="text-[11px] text-gray-400 mt-0.5">Deposit: ${esc(dep.method)} · TID ${esc(dep.tid)} · reported ${money(dep.amountReported)} · payer ${esc(dep.payerName)}</div>` : "";
+        const usdOrder = isUsd(o);
+        const waitingDeposit = o.escrow === "awaiting" && o.status === "pending";
+        let depositLine = "";
+        if (waitingDeposit && usdOrder) {
+            depositLine = `<div class="text-[11px] text-blue-600 mt-0.5">US dollar bank transfer · ref ${esc(dep.tid)} · buyer says sent ${usd(dep.amountReportedUsd)} · needs ${usd(dep.requiredUsd)} · payer ${esc(dep.payerName)}</div>`;
+        } else if (waitingDeposit) {
+            depositLine = `<div class="text-[11px] text-gray-400 mt-0.5">Deposit: ${esc(dep.method)} · TID ${esc(dep.tid)} · reported ${money(dep.amountReported)} · payer ${esc(dep.payerName)}</div>`;
+        } else if (usdOrder && dep.receivedUsd) {
+            depositLine = `<div class="text-[11px] text-blue-600 mt-0.5">Received ${usd(dep.receivedUsd)} · rate when confirmed Rs ${esc(dep.confirmedRate)}</div>`;
+        }
+        const amountCell = usdOrder && dep.requiredUsd
+            ? `${money(o.amount)}<div class="text-[11px] text-blue-600 font-medium">${usd(dep.requiredUsd)} USD</div>`
+            : money(o.amount);
         const buttons = [];
-        if (acts.includes("verify")) buttons.push(`<button data-id="${esc(o.id)}" data-action="verify" class="orderActBtn text-xs font-semibold text-emerald-700 hover:underline">Verify deposit</button>`);
+        if (acts.includes("verify")) {
+            if (usdOrder) buttons.push(`<button data-id="${esc(o.id)}" data-action="confirm_usd" class="orderActBtn text-xs font-semibold text-blue-700 hover:underline">Payment received (USD)</button>`);
+            else buttons.push(`<button data-id="${esc(o.id)}" data-action="verify" class="orderActBtn text-xs font-semibold text-emerald-700 hover:underline">Verify deposit</button>`);
+        }
         if (acts.includes("refund")) buttons.push(`<button data-id="${esc(o.id)}" data-action="refund" class="orderActBtn text-xs font-semibold text-red-600 hover:underline">Refund</button>`);
         return `
         <tr class="border-b border-gray-50 last:border-0 align-top">
             <td class="p-3 text-gray-500">#${esc(shortId(o.id))}</td>
             <td class="p-3 font-medium text-gray-900">${esc(o.title)}${depositLine}</td>
             <td class="p-3 text-gray-600">${esc(o.buyerName)} → ${esc(o.sellerName)}</td>
-            <td class="p-3 font-semibold text-gray-900">${money(o.amount)}</td>
+            <td class="p-3 font-semibold text-gray-900">${amountCell}</td>
             <td class="p-3">${badge(s)}</td>
             <td class="p-3 text-right space-x-3">${buttons.join("")}</td>
         </tr>`;
     }).join("") || `<tr><td colspan="6" class="p-6 text-center text-gray-400 text-xs">No orders yet.</td></tr>`;
+}
+
+async function confirmUsdPayment(o) {
+    const dep = o.deposit || {};
+    const need = Number(dep.requiredUsd);
+    const input = prompt(`How many US dollars did you actually receive in Payoneer for "${o.title}"?\n\nIt must be at least ${usd(need)}. Only continue after you see the money in your Payoneer account.`, need.toFixed(2));
+    if (input === null) return;
+    const got = Number(input);
+    if (!got || got < need) {
+        showAlert("error", `The amount received must be at least ${usd(need)}. If the buyer sent less, ask them to send the difference first.`);
+        return;
+    }
+    try {
+        const { error } = await supabase.rpc("admin_confirm_usd_payment", { p_order_id: o.id, p_usd_received: got });
+        if (error) throw error;
+        showAlert("success", `Dollar payment confirmed (${usd(got)}). The order is now in progress and the money is held in escrow.`);
+        scheduleUsdSummary();
+    } catch (err) {
+        const m = String((err && err.message) || "");
+        showAlert("error", m.includes("usd_too_low")
+            ? `The amount received must be at least ${usd(need)}.`
+            : "Could not confirm this payment. Please try again.");
+    }
 }
 
 $("ordersTableBody").addEventListener("click", async (e) => {
@@ -510,12 +620,15 @@ $("ordersTableBody").addEventListener("click", async (e) => {
     if (!o) return;
     const action = btn.dataset.action;
 
+    if (action === "confirm_usd") { await confirmUsdPayment(o); return; }
+
     if (action === "verify" && !confirm(`Confirm you received ${money(o.amount)} for "${o.title}"? The order will start and the money will show as held in escrow.`)) return;
     if (action === "refund" && !confirm(`Mark ${money(o.amount)} as refunded to the buyer and cancel this order? Send the money back yourself first.`)) return;
 
     try {
         await orderAction(o.id, action, {});
         showAlert("success", action === "verify" ? "Deposit verified. The order is now in progress." : "Order canceled and marked as refunded.");
+        scheduleUsdSummary();
     } catch (err) {
         showAlert("error", "Could not update this order. Please try again.");
     }
@@ -583,6 +696,7 @@ async function resolveDispute(action) {
         await orderAction(d.id, action, {});
         closeDisputeModal();
         showAlert("success", `Dispute #${shortId(d.id)} resolved — ${action === "resolve_refund" ? "marked as refunded to the buyer" : "released to the seller"}.`);
+        scheduleUsdSummary();
     } catch (err) {
         const box = $("disputeModalAlert");
         box.className = "p-3 rounded-lg text-xs font-medium border block bg-red-50 border-red-200 text-red-800";
@@ -610,7 +724,7 @@ function renderTxTable() {
             <tr class="border-b border-gray-50 last:border-0">
                 <td class="p-3 text-gray-500">#${esc(shortId(o.id))}</td>
                 <td class="p-3 font-medium text-gray-900">${esc(o.title)}</td>
-                <td class="p-3 font-semibold text-gray-900">${money(o.amount)}</td>
+                <td class="p-3 font-semibold text-gray-900">${money(o.amount)}${isUsd(o) && o.deposit.receivedUsd ? `<div class="text-[11px] text-blue-600 font-medium">${usd(o.deposit.receivedUsd)} USD</div>` : ""}</td>
                 <td class="p-3">${badge(txStatusMeta[o.escrow])}</td>
                 <td class="p-3 text-gray-500">${esc(formatDate(o.createdAt))}</td>
                 <td class="p-3"></td>
@@ -696,6 +810,7 @@ function renderAll() {
     renderOrdersTable();
     renderDisputes();
     renderTxTable();
+    scheduleUsdSummary();
 }
 
 requireLogin({ adminOnly: true }).then(async (res) => {
