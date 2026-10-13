@@ -93,6 +93,9 @@
                 </div>
             </div>
 
+            <!-- US dollar payment note (US dollar orders only) -->
+            <p id="modalUsd" class="hidden text-[11px] text-blue-800 bg-blue-50 border border-blue-100 rounded-lg p-3"></p>
+
             <!-- Fee breakdown (shown to the seller only) -->
             <p id="modalFee" class="hidden text-[11px] text-gray-600 bg-emerald-50 border border-emerald-100 rounded-lg p-3"></p>
 
@@ -137,6 +140,9 @@ let currentFilter = "all";
 let activeOrderId = null;
 let deepLinkHandled = false;
 
+const usdFmt = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const isUsd = (o) => !!(o.deposit && o.deposit.currency === "USD");
+
 function showAlert(msg) {
     const box = $("alertBox");
     box.className = "p-3 rounded-lg text-xs font-medium border block bg-red-50 border-red-200 text-red-800";
@@ -168,6 +174,8 @@ function renderOrders() {
     list.innerHTML = filtered.map((o) => {
         const s = STATUS_META[o.status] || STATUS_META.pending;
         const e = ESCROW_META[o.escrow] || ESCROW_META.awaiting;
+        const usdLine = isUsd(o) && o.deposit.requiredUsd
+            ? `<p class="text-[11px] text-blue-600 font-medium">${esc(usdFmt(o.deposit.requiredUsd))} USD</p>` : "";
         return `
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:shadow-md transition">
             <div class="flex-1 min-w-0">
@@ -181,6 +189,7 @@ function renderOrders() {
             </div>
             <div class="text-right shrink-0">
                 <p class="font-bold text-gray-900 text-sm">${money(o.amount)}</p>
+                ${usdLine}
                 <p class="text-[11px] ${e.color} font-medium">${esc(e.label)}</p>
             </div>
             <button data-id="${esc(o.id)}" class="viewOrderBtn shrink-0 px-4 py-2 text-xs font-semibold rounded-lg border border-emerald-700 text-emerald-700 hover:bg-emerald-50 transition">
@@ -247,6 +256,29 @@ function fillFeeNote(o) {
     }
 }
 
+// US dollar orders: the buyer sees the dollar amount; the seller is always paid in rupees.
+function fillUsdNote(o) {
+    const box = $("modalUsd");
+    if (!isUsd(o) || !o.deposit.requiredUsd) { box.classList.add("hidden"); return; }
+    const dep = o.deposit;
+    const buyer = roleIn(o, me.uid) === "buyer";
+    let text;
+    if (o.status === "pending" && o.escrow === "awaiting") {
+        text = buyer
+            ? "Paid in US dollars by bank transfer: " + usdFmt(dep.requiredUsd) + " (locked at Rs " + dep.rate + " per $1). We will start your order as soon as the transfer arrives, usually 1 to 5 business days. Your transfer reference: " + (dep.tid || "—") + "."
+            : "The buyer is paying " + usdFmt(dep.requiredUsd) + " by US bank transfer. The order starts when the money arrives.";
+    } else if (o.status === "cancelled") {
+        text = buyer ? "This order was paid in US dollars (" + usdFmt(dep.requiredUsd) + ")." : "";
+    } else {
+        text = buyer
+            ? "Paid in US dollars: " + usdFmt(dep.receivedUsd || dep.requiredUsd) + " (locked at Rs " + dep.rate + " per $1)."
+            : "The buyer paid in US dollars. You are paid in rupees from your wallet.";
+    }
+    if (!text) { box.classList.add("hidden"); return; }
+    box.textContent = text;
+    box.classList.remove("hidden");
+}
+
 function fillModal(o) {
     const e = ESCROW_META[o.escrow] || ESCROW_META.awaiting;
     $("modalOrderId").textContent = "Order #" + shortId(o.id);
@@ -257,6 +289,7 @@ function fillModal(o) {
     $("modalEscrow").textContent = e.label;
     $("modalEscrow").className = "font-semibold " + e.color;
     $("modalTimeline").innerHTML = renderTimeline(o.status);
+    fillUsdNote(o);
     fillFeeNote(o);
     fillAutoReleaseNote(o);
     $("modalActions").innerHTML = renderActions(o);
