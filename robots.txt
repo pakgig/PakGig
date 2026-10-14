@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /admin-kyc.html
+Disallow: /dashboard.html
+Disallow: /order.html
+Disallow: /messages.html
+Disallow: /escrow.html
+Disallow: /profile.html
+Disallow: /create-gig.html
+Disallow: /kyc.html
+Disallow: /reset-password.html
+
+Sitemap: https://pakgig.github.io/PakGig/sitemap.xml
