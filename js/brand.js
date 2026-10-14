@@ -37,8 +37,8 @@
 
     /* Public pages: description shown by Google under the page title */
     var SEO_DESCRIPTIONS = {
-        "services.html": "Browse freelance services from Pakistani sellers: web development, graphic design, SEO and digital marketing, writing and translation, video and animation, and AI and data entry. Secure escrow and a flat 8% fee.",
-        "signup.html": "Join PakGig free as a buyer or a seller. Hire Pakistani freelancers with secure escrow, or sell your skills and withdraw your earnings to a local bank account.",
+        "services.html": "Browse freelance services from skilled sellers: web development, graphic design, SEO and digital marketing, writing and translation, video and animation, and AI and data entry. Secure escrow and a flat 8% fee.",
+        "signup.html": "Join PakGig free as a buyer or a seller. Hire freelancers with secure escrow, or sell your skills and withdraw your earnings to a local bank account.",
         "contact.html": "Contact the PakGig team about orders, payments, withdrawals or your account. Email, phone and WhatsApp support, Monday to Saturday.",
         "privacy.html": "How PakGig collects, uses and protects your personal information, including account, order and identity verification data.",
         "terms.html": "The terms and conditions for buyers and sellers on PakGig, including escrow, platform fees, withdrawals and disputes.",
