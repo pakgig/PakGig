@@ -9,6 +9,9 @@
    4. Adds the standard footer (legal links) to signed-in pages that have none.
       On pages built as a side-by-side layout (admin panel) the footer goes
       inside the main column so it never squeezes the page.
+   5. Search engine setup: adds a description, canonical link and share-preview
+      tags to public pages, and tells Google NOT to index private pages
+      (dashboard, orders, messages, wallet, profile, KYC, admin, login).
    If anything here fails the page must still work, so every step is guarded. */
 (function () {
     if (window.__pgBrandLoaded) return;
@@ -30,6 +33,24 @@
         ["Cancellation, Return & Refund Policy", "refund-policy.html"],
         ["Ownership Statement", "ownership-statement.html"],
         ["Contact Us", "contact.html"]
+    ];
+
+    /* Public pages: description shown by Google under the page title */
+    var SEO_DESCRIPTIONS = {
+        "services.html": "Browse freelance services from Pakistani sellers: web development, graphic design, SEO and digital marketing, writing and translation, video and animation, and AI and data entry. Secure escrow and a flat 8% fee.",
+        "signup.html": "Join PakGig free as a buyer or a seller. Hire Pakistani freelancers with secure escrow, or sell your skills and withdraw your earnings to a local bank account.",
+        "contact.html": "Contact the PakGig team about orders, payments, withdrawals or your account. Email, phone and WhatsApp support, Monday to Saturday.",
+        "privacy.html": "How PakGig collects, uses and protects your personal information, including account, order and identity verification data.",
+        "terms.html": "The terms and conditions for buyers and sellers on PakGig, including escrow, platform fees, withdrawals and disputes.",
+        "refund-policy.html": "PakGig cancellation, return and refund policy for orders held in escrow, including the buyer review period and how disputes are handled.",
+        "ownership-statement.html": "Ownership and business details for the PakGig freelance marketplace."
+    };
+
+    /* Private pages: search engines must not list these */
+    var PRIVATE_PAGES = [
+        "dashboard.html", "order.html", "messages.html", "escrow.html",
+        "profile.html", "create-gig.html", "kyc.html", "reset-password.html",
+        "login.html", "404.html"
     ];
 
     var CSS =
@@ -79,6 +100,51 @@
         st.setAttribute("data-pg-theme", "1");
         st.textContent = CSS;
         document.head.appendChild(st);
+    }
+
+    function setMeta(attr, key, value) {
+        var el = document.head.querySelector("meta[" + attr + '="' + key + '"]');
+        if (el) return;
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        el.setAttribute("content", value);
+        document.head.appendChild(el);
+    }
+
+    // Search engine setup (works with any domain, nothing is hard-coded)
+    function addSeo() {
+        var here = currentPage();
+
+        // Private pages and admin pages: do not index
+        var isPrivate = here.indexOf("admin") === 0 || PRIVATE_PAGES.indexOf(here) !== -1;
+        if (isPrivate) {
+            setMeta("name", "robots", "noindex, nofollow");
+            return;
+        }
+
+        // One clean address per page (no ?search=... or #section variants)
+        var path = window.location.pathname;
+        if (/\/index\.html$/i.test(path)) path = path.slice(0, -10);
+        var url = window.location.origin + path;
+        if (!document.head.querySelector('link[rel="canonical"]')) {
+            var c = document.createElement("link");
+            c.rel = "canonical";
+            c.href = url;
+            document.head.appendChild(c);
+        }
+
+        var desc = SEO_DESCRIPTIONS[here];
+        if (desc) setMeta("name", "description", desc);
+
+        var title = document.title || "PakGig";
+        setMeta("property", "og:type", "website");
+        setMeta("property", "og:site_name", "PakGig");
+        setMeta("property", "og:title", title);
+        if (desc) setMeta("property", "og:description", desc);
+        setMeta("property", "og:url", url);
+        setMeta("name", "twitter:card", "summary");
+        setMeta("name", "twitter:title", title);
+        if (desc) setMeta("name", "twitter:description", desc);
     }
 
     function brandHeaderLogo() {
@@ -205,6 +271,7 @@
 
     function apply() {
         try { addHead(); } catch (e) {}
+        try { addSeo(); } catch (e) {}
         try { brandHeaderLogo(); } catch (e) {}
         try { unifyAppNav(); } catch (e) {}
         try { addFooterIfMissing(); } catch (e) {}
